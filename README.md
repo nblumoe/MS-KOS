@@ -13,6 +13,24 @@
 
 MS-KOS [em ˈes keɪ əʊz] are Micro Services in Chaos
 
+# Instructions
+
+## Service: living-colors
+
+Commands should be run in `living-colors` subdirectory:
+
+`cd living-colors`
+
+### Docker
+
+build Docker image:
+
+`sudo docker build -t living-colors .`
+
+run Docker container:
+
+`sudo docker run -P living-colors`
+
 # License
 
 GNU Affero General Public License v3
