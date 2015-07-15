@@ -49,11 +49,20 @@ Start second and third nodes:
 
 `docker run -d --name node3 -h node3 progrium/consul -server -join $JOIN_IP`
 
-### Investigate cluster manually
+Start a consul agent node with port mapping:
+
+```
+sudo docker run -d -p 8300:8300 -p 8301:8301 -p 8301:8301/udp \
+-p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 8600:53/udp \
+--name node4 -h node4 progrium/consul -advertise <HOST-IP> -join $JOIN_IP
+```
+
+### Inspect cluster manually
 
 Show members of current cluster via CLI (eventually consistent):
 
-`consul members` optionally use `-detailed` flag
+`consul members` optionally use `-detailed` flag, requires `consul` to be
+installed locally
 
 or HTTP API (strongly consistent):
 
@@ -62,6 +71,19 @@ or HTTP API (strongly consistent):
 or DNS:
 
 `dig @127.0.0.1 -p 8600 <YOUR HOST NAME>.node.consul`
+
+## Registrator
+
+Good tutorial for using Registrator: http://jlordiales.me/2015/02/03/registrator/
+
+Start Registrator:
+
+```
+sudo docker run -d \
+-v /var/run/docker.sock:/tmp/docker.sock \
+--name registrator -h registrator \
+progrium/registrator:latest consul://<HOST-IP>:8500
+```
 
 # License
 
