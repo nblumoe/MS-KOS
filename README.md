@@ -11,8 +11,10 @@
 
 # Introduction
 
-MS-KOS simulates micro services in chaos.
+MS-KOS [em ˈes keɪ əʊz] are Micro Services in Chaos
 
 # License
 
-TBD
+GNU Affero General Public License v3
+
+![AGPLv3](https://gnu.org/graphics/agplv3-155x51.png)
