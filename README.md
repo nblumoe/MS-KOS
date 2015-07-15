@@ -21,7 +21,7 @@ Commands should be run in `living-colors` subdirectory:
 
 `cd living-colors`
 
-### Docker
+### Run service with Docker
 
 build Docker image:
 
@@ -30,6 +30,38 @@ build Docker image:
 run Docker container:
 
 `sudo docker run -P living-colors`
+
+## Consul
+
+### Start consul server cluster
+
+Start first server node, expecting 3 nodes to form a cluster:
+
+`docker run -d --name node1 -h node1 progrium/consul -server -bootstrap-expect 3`
+
+Put first server node's IP in environment variable:
+
+`JOIN_IP="$(docker inspect -f '{{.NetworkSettings.IPAddress}}' node1)"`
+
+Start second and third nodes:
+
+`docker run -d --name node2 -h node2 progrium/consul -server -join $JOIN_IP`
+
+`docker run -d --name node3 -h node3 progrium/consul -server -join $JOIN_IP`
+
+### Investigate cluster manually
+
+Show members of current cluster via CLI (eventually consistent):
+
+`consul members` optionally use `-detailed` flag
+
+or HTTP API (strongly consistent):
+
+`curl localhost:8500/v1/catalog/nodes`
+
+or DNS:
+
+`dig @127.0.0.1 -p 8600 <YOUR HOST NAME>.node.consul`
 
 # License
 

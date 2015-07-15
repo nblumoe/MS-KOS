@@ -1,5 +1,9 @@
 FROM clojure
 
+RUN mkdir -p /etc/consul.d
+
+RUN echo '{"service": {"name": "living-colors", "port": 3000}}' >/etc/consul.d/web.json
+
 RUN mkdir -p /usr/src/app
 
 WORKDIR /usr/src/app
