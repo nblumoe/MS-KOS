@@ -85,6 +85,22 @@ sudo docker run -d \
 progrium/registrator:latest consul://<HOST-IP>:8500
 ```
 
+## Prometheus
+
+Set the IP in `prometheus.yml` under the key
+`scrape_configs/consul/target_groups/targets` to the IP of your Docker host.
+
+Run Prometheus and provide a `prometheus.yml` for it (needs to use absolute path):
+
+`sudo docker run -P -v /path/to/prometheus.yml:/etc/prometheus/prometheus.yml:ro prom/prometheus`
+
+### Consul Exporter
+
+The Consul Exporter provides metrics from the Consul cluster to Prometheus. If
+you change the bound port here, you also need to adjust it in `prometheus.yml`.
+
+`sudo docker run -d -p 9107:9107 prom/consul-exporter -consul.server=localhost:8500`
+
 # License
 
 GNU Affero General Public License v3
