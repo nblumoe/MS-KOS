@@ -13,6 +13,15 @@
 
 MS-KOS [em ˈes keɪ əʊz] are Micro Services in Chaos
 
+This is an example implementation and playground for running Micro Services with
+Docker, Consul, Registrator and Prometheus.
+
+## Attention
+
+At the moment this only works with Docker 1.6
+Update for newer Docker versions soon. You would need to take care of the
+network bridge, if you want to use Docker 1.7.
+
 # Instructions
 
 ## Service: living-colors

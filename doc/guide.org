@@ -1,0 +1,159 @@
+* Stop all running Docker containers
+  #+BEGIN_SRC sh :dir /sudo::
+  docker stop $(docker ps -a -q)
+  #+END_SRC
+
+  #+RESULTS:
+  | 9828a0c59ce2 |
+  | 656c5f3e9b71 |
+
+* Remove all Docker containers
+  #+BEGIN_SRC sh :dir /sudo::
+  docker rm $(docker ps -a -q)
+  #+END_SRC
+
+  #+RESULTS:
+  | 9828a0c59ce2 |
+  | 656c5f3e9b71 |
+
+* Consul Cluster
+** Start the cluster server nodes
+
+   Start first node and set expected cluster size to 3.
+
+   #+BEGIN_SRC sh :dir /sudo::
+   docker run -d --name node1 -h node1 progrium/consul:latest -server -bootstrap-expect 3
+   #+END_SRC
+
+   #+RESULTS:
+   : 22f0180068d02ec61320b93f7dc26a2fa4354f350d0bbbc0b799f3723315e855
+
+   Put first server node's IP in environment variable, then start two more nodes:
+   #+BEGIN_SRC sh :dir /sudo::
+   JOIN_IP="$(docker inspect -f '{{.NetworkSettings.IPAddress}}' node1)"
+   docker run -d --name node2 -h node2 progrium/consul -server -join $JOIN_IP
+   docker run -d --name node3 -h node3 progrium/consul -server -join $JOIN_IP
+   #+END_SRC
+
+   #+RESULTS:
+   : 96bcca558e6fa27008c23883fc9e99ec4d1d90ea36b429c0b4d1aad33239e9f9
+
+** Get access to the Consul Cluster
+
+   Start a consul agent node with port mapping, make sure to update your network
+   interface in the first row:
+
+   #+BEGIN_SRC sh :dir /sudo::
+   HOST_IP="$(/sbin/ip -o -4 addr list wlp6s0 | awk '{print $4}' | cut -d/ -f1)"
+   JOIN_IP="$(docker inspect -f '{{.NetworkSettings.IPAddress}}' node1)"
+   docker run -d -p 8300:8300 -p 8301:8301 -p 8301:8301/udp \
+   -p 8302:8302 -p 8302:8302/udp -p 8400:8400 -p 8500:8500 -p 8600:53/udp \
+   --name node4 -h node4 progrium/consul -advertise $HOST_IP -join $JOIN_IP
+   #+END_SRC
+
+   #+RESULTS:
+   : d5659a5e7b6b9e28fa99621f87b079295c7aca8109c1af785d52827794b1bcbf
+
+** Inspecting the Consul Cluster
+
+   Visit http://localhost:8500/ui to inspect the Web UI to your Consult cluster.
+
+   Get your consul nodes via the HTTP API:
+   #+BEGIN_SRC sh
+   curl localhost:8500/v1/catalog/nodes
+   #+END_SRC
+
+   #+RESULTS:
+   | Node":"node1 | 172.17.0.1 | Node":"node2 | 172.17.0.2 | Node":"node3 | 172.17.0.3 | Node":"node4 | 10.6.200.170 |
+
+   Get the available services via the HTTP API:
+   #+BEGIN_SRC sh
+   curl localhost:8500/v1/catalog/services
+   #+END_SRC
+
+   #+RESULTS:
+   | consul | udp | consul-8300:[] | udp | udp | consul-8400:[] | consul-8500:[] | consul-exporter:[] | prometheus:[]} |
+
+   Inspect the consul service:
+   #+BEGIN_SRC sh
+   curl localhost:8500/v1/catalog/service/consul
+   #+END_SRC
+
+   #+RESULTS:
+   | Node":"node2 | 172.17.0.2 | consul | consul | ServiceTags:[] | ServiceAddress:"" | ServicePort:8300} | Node":"node1 | 172.17.0.1 | consul | consul | ServiceTags:[] | ServiceAddress:"" | ServicePort:8300} | Node":"node3 | 172.17.0.3 | consul | consul | ServiceTags:[] | ServiceAddress:"" | ServicePort:8300}] |
+
+* Registrator
+  We now have a Consul cluster but somehow we need to register our services
+  there. We could do so, with a simple request from the services themselves.
+  However, as we use Docker, we can do it in a nicer way by using Registrator.
+
+  Start Registrator:
+
+  #+BEGIN_SRC sh :dir /sudo::
+  HOST_IP="$(/sbin/ip -o -4 addr list wlp6s0 | awk '{print $4}' | cut -d/ -f1)"
+  docker run -d \
+  -v /var/run/docker.sock:/tmp/docker.sock \
+  --name registrator -h registrator \
+  progrium/registrator:latest consul://$HOST_IP:8500
+  #+END_SRC
+
+  #+RESULTS:
+  : d8b209894fdc83b47754390beb910c8dc9d54a8dfd72a328a3c851bc2cf3a3b3
+
+  Registrator watches the Docker socket now and registers any services that we
+  start with Docker at Consul.
+
+* Prometheus
+
+  Set the IP in `prometheus.yml` under the key
+  `scrape_configs/consul/target_groups/targets` to the IP of your Docker host.
+
+  Run Prometheus and provide a `prometheus.yml` for it (needs to use absolute path):
+
+  #+BEGIN_SRC sh :dir /sudo::
+  docker run -p 9090:9090 -v /home/nblu/Projects/MS-KOS/prometheus.yml:/etc/prometheus/prometheus.yml:ro prom/prometheus
+  #+END_SRC
+
+  Prometheus should now show up as a service in Consul, check the web UI or the API.
+
+  Visit the Prometheus Web UI: http://localhost:9090
+
+  Recognize the status `UNHEALTHY` for the Consul service. We registerd such a
+  service in the Prometheus configuration but so far it is not reporting any
+  metrics. Let's do that next.
+
+* Consul Exporter
+
+  The Consul Exporter provides metrics from the Consul cluster to Prometheus. If
+  you change the bound port here, you also need to adjust it in `prometheus.yml`.
+
+  #+BEGIN_SRC sh :dir /sudo::
+  HOST_IP="$(/sbin/ip -o -4 addr list wlp6s0 | awk '{print $4}' | cut -d/ -f1)"
+  docker run -d -p 9107:9107 prom/consul-exporter -consul.server=$HOST_IP:8500
+  #+END_SRC
+
+  #+RESULTS:
+  : d2a3f7eb1f72aa8db852bbf0c057afca42705a6b347634dd0f0c549c197fc33c
+
+  A few seconds after starting the Consul Exporter container, the status of the
+  Consul service should turn into `HEALTHY` on Prometheus.
+
+* Starting Services
+
+** Build the example service
+
+   This is only needed once or when you change the service.
+
+   #+BEGIN_SRC sh :dir /sudo::
+   cd living-colors
+   docker build -t living-colors .
+   #+END_SRC
+
+** Run the example service
+
+   #+BEGIN_SRC sh :dir /sudo::
+   docker run -P living-colors
+   #+END_SRC
+
+   The service should show up in Consul. You can also start multiple services
+   and they should also automatically be registered at Consul.
