@@ -29,7 +29,12 @@ scrape_configs:
     target_groups:
       - targets: ['localhost:9090']
 
-  - job_name: 'consul'
+  - job_name: 'consul-exporter'
     target_groups:
       # TODO: this should not need to be a fixed IP, could use consul DNS
-      - targets: ['192.168.178.20:9107']
+      - targets: ['10.6.200.170:9107']
+
+  - job_name: 'container-exporter'
+    target_groups:
+      # TODO: this should not need to be a fixed IP, could use consul DNS
+      - targets: ['10.6.200.170:9104']

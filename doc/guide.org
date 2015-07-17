@@ -111,8 +111,11 @@
   Run Prometheus and provide a `prometheus.yml` for it (needs to use absolute path):
 
   #+BEGIN_SRC sh :dir /sudo::
-  docker run -p 9090:9090 -v /home/nblu/Projects/MS-KOS/prometheus.yml:/etc/prometheus/prometheus.yml:ro prom/prometheus
+  docker run -d -p 9090:9090 -v /home/nblu/Projects/MS-KOS/prometheus.yml:/etc/prometheus/prometheus.yml:ro prom/prometheus
   #+END_SRC
+
+  #+RESULTS:
+  : 8d4e2087d1b8e239ff0493f0f91f4c4309048cced7d8fc68bc130b479ed980db
 
   Prometheus should now show up as a service in Consul, check the web UI or the API.
 
@@ -138,6 +141,14 @@
   A few seconds after starting the Consul Exporter container, the status of the
   Consul service should turn into `HEALTHY` on Prometheus.
 
+* Container Exporter
+  #+BEGIN_SRC sh :dir /sudo::
+  docker run -p 9104:9104 -d -v /sys/fs/cgroup:/cgroup -v /var/run/docker.sock:/var/run/docker.sock prom/container-exporter
+  #+END_SRC
+
+  #+RESULTS:
+  : b58f0244b092d7069de2a1de975920502aa91bc200e18aeb749edc4ff02be928
+
 * Starting Services
 
 ** Build the example service
@@ -152,8 +163,16 @@
 ** Run the example service
 
    #+BEGIN_SRC sh :dir /sudo::
-   docker run -P living-colors
+   docker run -d -P living-colors
    #+END_SRC
+
+   #+RESULTS:
+   : 9a85db01f6cace53ae4987cb130ff5cb21080ac0fe9b1c4e4c4a7eef8b3ee33c
 
    The service should show up in Consul. You can also start multiple services
    and they should also automatically be registered at Consul.
+
+   To monitor the number of services running in Prometheus try the query
+   `consul_catalog_service_nodes{service="living-colors"}`
+
+   Or this link directly: http://localhost:9090/graph#[{%22expr%22%3A%22consul_catalog_service_nodes{service%3D\%22living-colors\%22}%22%2C%22range_input%22%3A%221h%22%2C%22end_input%22%3A%22%22%2C%22step_input%22%3A%22%22%2C%22stacked%22%3A%22%22%2C%22tab%22%3A0}]
