@@ -18,9 +18,11 @@ Docker, Consul, Registrator and Prometheus.
 
 ## Attention
 
-At the moment this only works with Docker 1.6
-Update for newer Docker versions soon. You would need to take care of the
-network bridge, if you want to use Docker 1.7.
+If you are using Docker 1.7+ you might need to disable or tweak your firewall to
+make this work. Seems to be a bug in Docker:
+https://github.com/docker/docker/issues/14396
+
+With Docker 1.6 I did not encounter that issue.
 
 # Guide
 
